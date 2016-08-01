@@ -38,15 +38,15 @@
 const int PEDAL_PIN = A0;
 const int GEAR1_PIN = A1;
 const int GEAR2_PIN = A2;
-const int REV_PIN = A3;
+const int REV_PIN   = A3;
 const int BRAKE_PIN = A4;
 
-ResponsiveAnalogRead analog(PEDAL_PIN, true);
+ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
 int pedalMinimumValue = 190; // minimum value from the pedal
-int pedalMaximumValue = 840; // maximum value from the pedal
+int pedalMaximumValue = 780; // maximum value from the pedal
 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
-int motorMaximumSpeed = 140; // Highest speed the motor can run at (max 255)
+int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
 int motorCurrentValue = 0;   // The current speed value, used to feed into the motor control
 
 int gear1_button; // button state for gear 1
@@ -102,16 +102,22 @@ void loop()
 	motorCurrentValue = map(analog.getValue(),pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
 	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
+	// we can use this if sentence to only start output at desired value
+	if(motorCurrentValue <= motorMinimumSpeed && motorMinimumSpeed > 0)
+	{
+	    motorCurrentValue = 0;
+	}
+
 	// Set the desired output depending on state.
 	switch(state)
 	{
 		case PARKING:
-			motor.close(B);
-			motor.close(A);
+			motor.set(B, 0, COAST);							// channel B Coast
+			motor.set(A, 0, COAST);							// channel A Coast
 			break;
 		case BRAKING:
-			motor.set(B, 0, BRAKE);
-			motor.set(A, 0, BRAKE);
+			motor.set(B, 0, BRAKE);							// channel B Brake
+			motor.set(A, 0, BRAKE);							// channel A Brake
 			break;
 		case GEAR1:
 			motor.set(B, motorCurrentValue/2, FORWARD);     // channel B FORWARD rotation at half speed
