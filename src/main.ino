@@ -29,11 +29,11 @@
  */
 
 // import ResponsiveAnalogRead library
-#include "./third-party/ResponsiveAnalogRead.h"
+#include <ResponsiveAnalogRead.h>
 // import motor library
-#include "./third-party/MOTOR.h"
+#include <MOTOR.h>
 
-//#define SERLOG //Turn on Serial logging
+#define SERLOG //Turn on Serial logging
 
 const int PEDAL_PIN = A0;
 const int GEAR1_PIN = A1;
@@ -112,8 +112,10 @@ void loop()
 	switch(state)
 	{
 		case PARKING:
-			motor.close(B);//set(B, 0, COAST);							// channel B Coast
-			motor.close(A);//set(A, 0, COAST);							// channel A Coast
+			// motor.set(B, 0, COAST);							// channel B Coast
+			// motor.set(A, 0, COAST);							// channel A Coast
+			motor.close(B);
+			motor.close(A);
 			break;
 		case BRAKING:
 			motor.set(B, 0, BRAKE);							// channel B Brake
@@ -152,7 +154,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (gear2_button == LOW && motorCurrentValue <= 2)
+	else if (gear2_button == LOW && motorCurrentValue > 2)
 	{
 		state = GEAR2;
 		#ifdef SERLOG
@@ -160,7 +162,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (revGear_button == LOW && motorCurrentValue <= 2)
+	else if (revGear_button == LOW && motorCurrentValue > 2)
 	{
 		state = REVGEAR;
 		#ifdef SERLOG
@@ -168,7 +170,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (gear1_button == LOW && motorCurrentValue <= 2)
+	else if (gear1_button == LOW && motorCurrentValue > 2)
 	{
 		state = GEAR1;
 		#ifdef SERLOG

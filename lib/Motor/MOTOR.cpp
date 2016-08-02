@@ -5,7 +5,7 @@
 	@date    	2012-6-22
 	@brief      source file for 50A-Dula Channel Motor Driver Board
                 Work fine on Arduino-UNO, at present;
-				
+
 	@section  HISTORY
 	V2.0	2012-12-30	Hardware change, pin redefine
     V1.0	2012-12-25	Initial version.
@@ -123,6 +123,7 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
 	if(ch == A){
         if(dir == FORWARD)
         {
+            digitalWrite(A_EN, HIGH);
             OCR2B = speed;
             A_RPWM_ON();
             A_LPWM_OFF();
@@ -138,14 +139,15 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
         }
         else if(dir == COAST)
         {
-			A_LPWM_OFF();
-			A_RPWM_OFF();
-			digitalWrite(A_EN, LOW);
-			digitalWrite(A_LPWM, HIGH);
-			digitalWrite(A_RPWM, HIGH);
-		}
+      			A_LPWM_OFF();
+      			A_RPWM_OFF();
+      			digitalWrite(A_EN, LOW);
+      			digitalWrite(A_LPWM, HIGH);
+      			digitalWrite(A_RPWM, HIGH);
+  		  }
         else
         {
+            digitalWrite(A_EN, HIGH);
             OCR2A = speed;
             A_LPWM_ON();
             A_RPWM_OFF();
@@ -154,6 +156,7 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
     }else if(ch == B){
         if(dir == FORWARD)
         {
+            digitalWrite(B_EN, HIGH);
             OCR1A = speed;
             B_RPWM_ON();
             B_LPWM_OFF();
@@ -161,22 +164,23 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
         }
         else if(dir == BRAKE)
         {
-			B_LPWM_OFF();
-			B_RPWM_OFF();
-			digitalWrite(B_EN, HIGH);
-			digitalWrite(B_LPWM, HIGH);
-			digitalWrite(B_RPWM, HIGH);
-		}
+      			B_LPWM_OFF();
+      			B_RPWM_OFF();
+      			digitalWrite(B_EN, HIGH);
+      			digitalWrite(B_LPWM, HIGH);
+      			digitalWrite(B_RPWM, HIGH);
+  		  }
         else if(dir == COAST)
-		{
-			B_LPWM_OFF();
-			B_RPWM_OFF();
-			digitalWrite(B_EN, LOW);
-			digitalWrite(B_LPWM, HIGH);
-			digitalWrite(B_RPWM, HIGH);
-		}
+    		{
+      			B_LPWM_OFF();
+      			B_RPWM_OFF();
+      			digitalWrite(B_EN, LOW);
+      			digitalWrite(B_LPWM, HIGH);
+      			digitalWrite(B_RPWM, HIGH);
+    		}
         else
         {
+            digitalWrite(B_EN, HIGH);
             OCR1B = speed;
             B_LPWM_ON();
             B_RPWM_OFF();
@@ -277,4 +281,3 @@ void motor_delay(unsigned long ms)
 	}
 }
 #endif
-
