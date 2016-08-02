@@ -112,8 +112,8 @@ void loop()
 	switch(state)
 	{
 		case PARKING:
-			motor.set(B, 0, COAST);							// channel B Coast
-			motor.set(A, 0, COAST);							// channel A Coast
+			motor.close(B);//set(B, 0, COAST);							// channel B Coast
+			motor.close(A);//set(A, 0, COAST);							// channel A Coast
 			break;
 		case BRAKING:
 			motor.set(B, 0, BRAKE);							// channel B Brake
@@ -152,15 +152,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (gear1_button == LOW)
-	{
-		state = GEAR1;
-		#ifdef SERLOG
-			Serial.print("state = GEAR1, ");
-			Serial.println(state);
-		#endif
-	}
-	else if (gear2_button == LOW)
+	else if (gear2_button == LOW && motorCurrentValue <= 2)
 	{
 		state = GEAR2;
 		#ifdef SERLOG
@@ -168,11 +160,19 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (revGear_button == LOW)
+	else if (revGear_button == LOW && motorCurrentValue <= 2)
 	{
 		state = REVGEAR;
 		#ifdef SERLOG
 			Serial.print("state = REVGEAR, ");
+			Serial.println(state);
+		#endif
+	}
+	else if (gear1_button == LOW && motorCurrentValue <= 2)
+	{
+		state = GEAR1;
+		#ifdef SERLOG
+			Serial.print("state = GEAR1, ");
 			Serial.println(state);
 		#endif
 	}
