@@ -40,6 +40,7 @@ const int GEAR1_PIN = A1;
 const int GEAR2_PIN = A2;
 const int REV_PIN   = A3;
 const int BRAKE_PIN = A4;
+const int RELAY_PIN = A5;
 
 ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
 int pedalMinimumValue = 190; // minimum value from the pedal
@@ -84,11 +85,15 @@ void setup()
 	pinMode(REV_PIN,INPUT);
 	pinMode(BRAKE_PIN,INPUT);
 
+	//Set the output pins
+	pinMode(RELAY_PIN,OUTPUT);
+
 	//Make the pins work as pull-ups to avoid voltage leaks.
 	digitalWrite(GEAR1_PIN,HIGH);
 	digitalWrite(GEAR2_PIN,HIGH);
 	digitalWrite(REV_PIN,HIGH);
 	digitalWrite(BRAKE_PIN,HIGH);
+	digitalWrite(RELAY_PIN,HIGH);
 }
 
 // The loop function is called in an endless loop
@@ -108,28 +113,36 @@ void loop()
 	    motorCurrentValue = 0;
 	}
 
+	digitalWrite(RELAY_PIN,LOW);
+
 	// Set the desired output depending on state.
 	switch(state)
 	{
 		case PARKING:
+		  digitalWrite(RELAY_PIN,HIGH);
 			// motor.set(B, 0, COAST);							// channel B Coast
 			// motor.set(A, 0, COAST);							// channel A Coast
 			motor.close(B);
 			motor.close(A);
+
 			break;
 		case BRAKING:
+		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, 0, BRAKE);							// channel B Brake
 			motor.set(A, 0, BRAKE);							// channel A Brake
 			break;
 		case GEAR1:
+		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, FORWARD);     // channel B FORWARD rotation at half speed
 			motor.set(A, motorCurrentValue/2, FORWARD);     // channel A FORWARD rotation at half speed
 			break;
 		case GEAR2:
+		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue, FORWARD);     // channel B FORWARD rotation
 			motor.set(A, motorCurrentValue, FORWARD);     // channel A FORWARD rotation
 			break;
 		case REVGEAR:
+		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, REVERSE);     // channel B REVERSE rotation
 			motor.set(A, motorCurrentValue/2, REVERSE);     // channel A REVERSE rotation
 			break;
