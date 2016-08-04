@@ -15,4 +15,4 @@ Metal Hall effect Scooter foot throttle pedal 'free shipping' jt2 generic
 
 Also using the awesome [ResponsiveAnalogRead](https://github.com/dxinteractive/ResponsiveAnalogRead) library from Damien Clarke to smooth out the analog input.
 
-The code have been written using the [Arduino Eclipse IDE](http://eclipse.baeyens.it/index.shtml).
+The code have been written using the [PlatformIO](http://platformio.org/).
