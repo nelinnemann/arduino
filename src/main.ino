@@ -47,7 +47,7 @@ const int RELAY_PIN = A5;
 
 // Used to enable the pedal above a certain point when it is pressed.
 // helps in making the car coast once the pedal is released.
-const int enablePedeal = 10;
+const int enablePedal = 10;
 
 const int punishTime = 1000; //punish for x ms if the pedal is yanked all the time
 
@@ -225,7 +225,7 @@ void checkButtons()
 		#endif
 	}
 
-	else if (gear2_button == LOW && motorCurrentValue > enablePedeal)
+	else if (gear2_button == LOW && motorCurrentValue > enablePedal)
 	{
 		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
@@ -242,7 +242,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (revGear_button == LOW && motorCurrentValue > enablePedeal)
+	else if (revGear_button == LOW && motorCurrentValue > enablePedal)
 	{
 		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
@@ -259,7 +259,7 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (gear1_button == LOW && motorCurrentValue > enablePedeal)
+	else if (gear1_button == LOW && motorCurrentValue > enablePedal)
 	{
 		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
