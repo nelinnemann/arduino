@@ -32,6 +32,9 @@
 #include <ResponsiveAnalogRead.h>
 // import motor library
 #include <MOTOR.h>
+// import the Metro library
+#include <Metro.h>
+
 
 #define SERLOG //Turn on Serial logging
 
@@ -42,18 +45,38 @@ const int REV_PIN   = A3;
 const int BRAKE_PIN = A4;
 const int RELAY_PIN = A5;
 
+// Used to enable the pedal above a certain point when it is pressed.
+// helps in making the car coast once the pedal is released.
+const int enablePedeal = 10;
+
+const int punishTime = 1000; //punish for x ms if the pedal is yanked all the time
+
+// Instanciate a metro object and set the interval to 100 milliseconds (0.1 seconds).
+Metro pedalTimer = Metro(100);
+
+// The timer for changing gear, if the gear is changed faster than this delay it wont do it.
+unsigned long previousGearTime=0;
+
 ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
 int pedalMinimumValue = 190; // minimum value from the pedal
 int pedalMaximumValue = 780; // maximum value from the pedal
+int pedalCurrentValue = pedalMinimumValue; // current value of the pedal.
+int pedalPrevValue = pedalMinimumValue; // Previous value of the pedal, used to compare
+int pedalDiff = 0; // diff between current value and previous value.
+
 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
 int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
 int motorCurrentValue = 0;   // The current speed value, used to feed into the motor control
+int accelRate = 10; // Acceleration rate for the car
+
 
 int gear1_button; // button state for gear 1
 int gear2_button; // button state for gear 2
 int revGear_button; // button state for reverse gear
 int brake_button;   // button state for brake pedal
+
+
 
 // States that our electrical car can be in.
 typedef enum states{
@@ -94,18 +117,45 @@ void setup()
 	digitalWrite(REV_PIN,HIGH);
 	digitalWrite(BRAKE_PIN,HIGH);
 	digitalWrite(RELAY_PIN,HIGH);
+
+	// Start the gear timer at 0
+	unsigned long previousMillis=0;
 }
 
 // The loop function is called in an endless loop
 void loop()
 {
-	// update the ResponsiveAnalogRead object every loop
-	analog.update();
+	// update the ResponsiveAnalogRead object every time the timer is true
+	if(pedalTimer.check() == 1)
+	{
+		analog.update();
+		pedalCurrentValue = analog.getValue();
+
+		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
+
+		if(pedalDiff > accelRate)
+		{
+			if(pedalCurrentValue > pedalPrevValue)
+			{
+				pedalCurrentValue = pedalPrevValue + accelRate;
+			}
+			else
+			{
+				pedalCurrentValue = pedalPrevValue - accelRate;
+			}
+
+
+		}
+
+		pedalPrevValue = pedalCurrentValue;
+
+		// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
+		motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
+		motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
+	}
+
 	// Check for button presses and set the state accordingly
 	checkButtons();
-	// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
-	motorCurrentValue = map(analog.getValue(),pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
-	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
 	// we can use this if sentence to only start output at desired value
 	if(motorCurrentValue <= motorMinimumSpeed && motorMinimumSpeed > 0)
@@ -152,6 +202,13 @@ void loop()
 
 void checkButtons()
 {
+	unsigned long currentMillis = millis();
+
+	#ifdef SERLOG
+		Serial.print("time = ");
+		Serial.println(currentMillis);
+	#endif
+
 	// read digital inputs
 	gear1_button = digitalRead(GEAR1_PIN);
 	gear2_button = digitalRead(GEAR2_PIN);
@@ -167,25 +224,52 @@ void checkButtons()
 			Serial.println(state);
 		#endif
 	}
-	else if (gear2_button == LOW && motorCurrentValue > 2)
+
+	else if (gear2_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		state = GEAR2;
+		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		{
+			state = PARKING;
+		}
+		else
+		{
+			state = GEAR2;
+			previousGearTime = currentMillis;
+		}
+
 		#ifdef SERLOG
 			Serial.print("state = GEAR2, ");
 			Serial.println(state);
 		#endif
 	}
-	else if (revGear_button == LOW && motorCurrentValue > 2)
+	else if (revGear_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		state = REVGEAR;
+		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		{
+			state = PARKING;
+		}
+		else
+		{
+			state = REVGEAR;
+			previousGearTime = currentMillis;
+		}
+
 		#ifdef SERLOG
 			Serial.print("state = REVGEAR, ");
 			Serial.println(state);
 		#endif
 	}
-	else if (gear1_button == LOW && motorCurrentValue > 2)
+	else if (gear1_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		state = GEAR1;
+		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		{
+			state = PARKING;
+		}
+		else
+		{
+			state = GEAR1;
+			previousGearTime = currentMillis;
+		}
 		#ifdef SERLOG
 			Serial.print("state = GEAR1, ");
 			Serial.println(state);

@@ -1,7 +1,7 @@
-Release/
 .pioenvs
 .clang_complete
 .gcc-flags.json
+Release/
 # Compiled Object files
 *.slo
 *.lo
