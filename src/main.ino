@@ -227,7 +227,7 @@ void checkButtons()
 
 	else if (gear2_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
 			state = PARKING;
 		}
@@ -244,7 +244,7 @@ void checkButtons()
 	}
 	else if (revGear_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
 			state = PARKING;
 		}
@@ -261,7 +261,7 @@ void checkButtons()
 	}
 	else if (gear1_button == LOW && motorCurrentValue > enablePedeal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) >= punishTime)
+		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 		{
 			state = PARKING;
 		}
