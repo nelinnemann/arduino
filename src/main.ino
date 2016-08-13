@@ -36,7 +36,7 @@
 #include <Metro.h>
 
 
-#define SERLOG //Turn on Serial logging
+// #define SERLOG //Turn on Serial logging
 
 const int PEDAL_PIN = A0;
 const int GEAR1_PIN = A1;
@@ -47,19 +47,19 @@ const int RELAY_PIN = A5;
 
 // Used to enable the pedal above a certain point when it is pressed.
 // helps in making the car coast once the pedal is released.
-const int enablePedal = 10;
+const int enablePedal = 5;
 
-const int punishTime = 1000; //punish for x ms if the pedal is yanked all the time
+const int punishTime = 2000; //punish for x ms if the pedal is yanked all the time
 
 // Instanciate a metro object and set the interval to 100 milliseconds (0.1 seconds).
-Metro pedalTimer = Metro(100);
+Metro pedalTimer = Metro(50);
 
 // The timer for changing gear, if the gear is changed faster than this delay it wont do it.
 unsigned long previousGearTime=0;
 
 ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
-int pedalMinimumValue = 190; // minimum value from the pedal
-int pedalMaximumValue = 780; // maximum value from the pedal
+int pedalMinimumValue = 160; // minimum value from the pedal
+int pedalMaximumValue = 640; // maximum value from the pedal
 int pedalCurrentValue = pedalMinimumValue; // current value of the pedal.
 int pedalPrevValue = pedalMinimumValue; // Previous value of the pedal, used to compare
 int pedalDiff = 0; // diff between current value and previous value.
@@ -88,6 +88,7 @@ typedef enum states{
 } states;
 
 states state = PARKING; // Set the initial state for the state
+states prevState = PARKING;
 
 void setup()
 {
@@ -126,13 +127,16 @@ void setup()
 void loop()
 {
 	// update the ResponsiveAnalogRead object every time the timer is true
+	analog.update();
 	if(pedalTimer.check() == 1)
 	{
-		analog.update();
+
 		pedalCurrentValue = analog.getValue();
 
 		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
 
+
+		// if the pedal is released or pressed too rapidly we control the accel/deccel
 		if(pedalDiff > accelRate)
 		{
 			if(pedalCurrentValue > pedalPrevValue)
@@ -143,27 +147,25 @@ void loop()
 			{
 				pedalCurrentValue = pedalPrevValue - accelRate;
 			}
-
+			pedalPrevValue = pedalCurrentValue;
 
 		}
-
-		pedalPrevValue = pedalCurrentValue;
+		else
+		{
+			pedalPrevValue = pedalCurrentValue;
+		}
+		#ifdef SERLOG
+			Serial.print("pedal = ");
+			Serial.println(pedalCurrentValue);
+		#endif
+	}
 
 		// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
-		motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
-		motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
-	}
+	motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
+	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
 	// Check for button presses and set the state accordingly
 	checkButtons();
-
-	// we can use this if sentence to only start output at desired value
-	if(motorCurrentValue <= motorMinimumSpeed && motorMinimumSpeed > 0)
-	{
-	    motorCurrentValue = 0;
-	}
-
-	digitalWrite(RELAY_PIN,LOW);
 
 	// Set the desired output depending on state.
 	switch(state)
@@ -174,27 +176,31 @@ void loop()
 			// motor.set(A, 0, COAST);							// channel A Coast
 			motor.close(B);
 			motor.close(A);
-
+			prevState = PARKING;
 			break;
 		case BRAKING:
 		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, 0, BRAKE);							// channel B Brake
 			motor.set(A, 0, BRAKE);							// channel A Brake
+			prevState = BRAKING;
 			break;
 		case GEAR1:
 		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, FORWARD);     // channel B FORWARD rotation at half speed
 			motor.set(A, motorCurrentValue/2, FORWARD);     // channel A FORWARD rotation at half speed
+			prevState = GEAR1;
 			break;
 		case GEAR2:
 		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue, FORWARD);     // channel B FORWARD rotation
 			motor.set(A, motorCurrentValue, FORWARD);     // channel A FORWARD rotation
+			prevState = GEAR2;
 			break;
 		case REVGEAR:
 		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, REVERSE);     // channel B REVERSE rotation
 			motor.set(A, motorCurrentValue/2, REVERSE);     // channel A REVERSE rotation
+			prevState = REVGEAR;
 			break;
 	}
 
@@ -206,7 +212,7 @@ void checkButtons()
 
 	#ifdef SERLOG
 		Serial.print("time = ");
-		Serial.println(currentMillis);
+		Serial.println((unsigned long)(currentMillis - previousGearTime));
 	#endif
 
 	// read digital inputs
@@ -219,23 +225,26 @@ void checkButtons()
 	if(brake_button == LOW)
 	{
 		state = BRAKING;
+
 		#ifdef SERLOG
 			Serial.print("state = BRAKING, ");
 			Serial.println(state);
 		#endif
 	}
 
+	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
+	{
+		state = PARKING;
+
+		#ifdef SERLOG
+			Serial.print("state = PARKING, ");
+			Serial.println("PUNISH");
+		#endif
+	}
+
 	else if (gear2_button == LOW && motorCurrentValue > enablePedal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
-		{
-			state = PARKING;
-		}
-		else
-		{
-			state = GEAR2;
-			previousGearTime = currentMillis;
-		}
+		state = GEAR2;
 
 		#ifdef SERLOG
 			Serial.print("state = GEAR2, ");
@@ -244,15 +253,7 @@ void checkButtons()
 	}
 	else if (revGear_button == LOW && motorCurrentValue > enablePedal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
-		{
-			state = PARKING;
-		}
-		else
-		{
-			state = REVGEAR;
-			previousGearTime = currentMillis;
-		}
+		state = REVGEAR;
 
 		#ifdef SERLOG
 			Serial.print("state = REVGEAR, ");
@@ -261,15 +262,8 @@ void checkButtons()
 	}
 	else if (gear1_button == LOW && motorCurrentValue > enablePedal)
 	{
-		if((unsigned long)(currentMillis - previousGearTime) <= punishTime)
-		{
-			state = PARKING;
-		}
-		else
-		{
-			state = GEAR1;
-			previousGearTime = currentMillis;
-		}
+		state = GEAR1;
+
 		#ifdef SERLOG
 			Serial.print("state = GEAR1, ");
 			Serial.println(state);
@@ -278,9 +272,22 @@ void checkButtons()
 	else
 	{
 		state = PARKING;
+
 		#ifdef SERLOG
 			Serial.print("state = PARKING, ");
 			Serial.println(state);
 		#endif
 	}
+
+  // Here we punish the driver if the gear leaver is yanked around all the time.
+	if( (prevState == GEAR1 && state == REVGEAR) || (prevState == REVGEAR && state == GEAR1) || (prevState == REVGEAR && state == GEAR2) || (prevState == GEAR2 && state == REVGEAR) )
+	{
+		previousGearTime = currentMillis;
+		state = PARKING;
+	}
+	else
+	{
+		state = state;
+	}
+
 }
