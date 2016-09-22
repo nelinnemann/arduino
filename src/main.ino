@@ -58,8 +58,8 @@ Metro pedalTimer = Metro(50);
 unsigned long previousGearTime=0;
 
 ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
-int pedalMinimumValue = 160; // minimum value from the pedal
-int pedalMaximumValue = 640; // maximum value from the pedal
+int pedalMinimumValue = 190; // minimum value from the pedal
+int pedalMaximumValue = 780; // maximum value from the pedal
 int pedalCurrentValue = pedalMinimumValue; // current value of the pedal.
 int pedalPrevValue = pedalMinimumValue; // Previous value of the pedal, used to compare
 int pedalDiff = 0; // diff between current value and previous value.
@@ -235,6 +235,7 @@ void checkButtons()
 	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 	{
 		state = PARKING;
+		pedalCurrentValue = pedalMinimumValue;
 
 		#ifdef SERLOG
 			Serial.print("state = PARKING, ");
@@ -272,6 +273,7 @@ void checkButtons()
 	else
 	{
 		state = PARKING;
+		pedalCurrentValue = pedalMinimumValue;
 
 		#ifdef SERLOG
 			Serial.print("state = PARKING, ");
@@ -283,6 +285,7 @@ void checkButtons()
 	if( (prevState == GEAR1 && state == REVGEAR) || (prevState == REVGEAR && state == GEAR1) || (prevState == REVGEAR && state == GEAR2) || (prevState == GEAR2 && state == REVGEAR) )
 	{
 		previousGearTime = currentMillis;
+		pedalCurrentValue = pedalMinimumValue;
 		state = PARKING;
 	}
 	else
