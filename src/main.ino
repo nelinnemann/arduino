@@ -45,6 +45,9 @@ const int REV_PIN   = A3;
 const int BRAKE_PIN = A4;
 const int RELAY_PIN = A5;
 
+const int LOW_GEAR = 5;
+const int HIGH_GEAR = 6;
+
 // Used to enable the pedal above a certain point when it is pressed.
 // helps in making the car coast once the pedal is released.
 const int enablePedal = 5;
@@ -64,6 +67,7 @@ int pedalCurrentValue = pedalMinimumValue; // current value of the pedal.
 int pedalPrevValue = pedalMinimumValue; // Previous value of the pedal, used to compare
 int pedalDiff = 0; // diff between current value and previous value.
 
+bool first = true; //First iteration in the loop to avoid speeder being pressed down on boot
 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
 int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
@@ -76,7 +80,8 @@ int gear2_button; // button state for gear 2
 int revGear_button; // button state for reverse gear
 int brake_button;   // button state for brake pedal
 
-
+int lowGear_button; // Button state for low gear
+int highGear_button; // Button state for high gear
 
 // States that our electrical car can be in.
 typedef enum states{
@@ -108,6 +113,8 @@ void setup()
 	pinMode(GEAR2_PIN,INPUT);
 	pinMode(REV_PIN,INPUT);
 	pinMode(BRAKE_PIN,INPUT);
+	pinMode(LOW_GEAR,INPUT);
+	pinMode(HIGH_GEAR,INPUT);
 
 	//Set the output pins
 	pinMode(RELAY_PIN,OUTPUT);
@@ -118,6 +125,8 @@ void setup()
 	digitalWrite(REV_PIN,HIGH);
 	digitalWrite(BRAKE_PIN,HIGH);
 	digitalWrite(RELAY_PIN,HIGH);
+	digitalWrite(LOW_GEAR,HIGH);
+	digitalWrite(HIGH_GEAR,HIGH);
 
 	// Start the gear timer at 0
 	unsigned long previousMillis=0;
@@ -132,6 +141,12 @@ void loop()
 	{
 
 		pedalCurrentValue = analog.getValue();
+
+		//Set the value for the first loop to avoid speeder being pressed down.
+		if(first)
+		{
+			pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
+		}
 
 		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
 
@@ -154,18 +169,17 @@ void loop()
 		{
 			pedalPrevValue = pedalCurrentValue;
 		}
-		#ifdef SERLOG
-			Serial.print("pedal = ");
-			Serial.println(pedalCurrentValue);
-		#endif
 	}
+
+
+	// Check for button presses and set the state accordingly
+	checkButtons();
 
 		// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
 	motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
 	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
-	// Check for button presses and set the state accordingly
-	checkButtons();
+
 
 	// Set the desired output depending on state.
 	switch(state)
@@ -204,16 +218,13 @@ void loop()
 			break;
 	}
 
+	first = false; //Set the variable to false after the first loop.
+
 }
 
 void checkButtons()
 {
 	unsigned long currentMillis = millis();
-
-	#ifdef SERLOG
-		Serial.print("time = ");
-		Serial.println((unsigned long)(currentMillis - previousGearTime));
-	#endif
 
 	// read digital inputs
 	gear1_button = digitalRead(GEAR1_PIN);
@@ -221,64 +232,50 @@ void checkButtons()
 	revGear_button = digitalRead(REV_PIN);
 	brake_button = digitalRead(BRAKE_PIN);
 
+	lowGear_button = digitalRead(LOW_GEAR);
+	highGear_button = digitalRead(HIGH_GEAR);
+
+	// Here we check for the button that sets the maximum speed of the car
+	if(lowGear_button == LOW)
+	{
+		motorMaximumSpeed = 64; // quarter speed, button at 1
+	}
+	else if(highGear_button == LOW)
+	{
+		motorMaximumSpeed = 254; // full speed, button at 2
+	}
+  else
+	{
+		motorMaximumSpeed = 127; // Half speed, button at 0
+	}
+
 	// Detect button presses, brake must be first to override the rest.
 	if(brake_button == LOW)
 	{
 		state = BRAKING;
-
-		#ifdef SERLOG
-			Serial.print("state = BRAKING, ");
-			Serial.println(state);
-		#endif
+		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
-
 	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 	{
 		state = PARKING;
-		pedalCurrentValue = pedalMinimumValue;
-
-		#ifdef SERLOG
-			Serial.print("state = PARKING, ");
-			Serial.println("PUNISH");
-		#endif
+		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
-
 	else if (gear2_button == LOW && motorCurrentValue > enablePedal)
 	{
 		state = GEAR2;
-
-		#ifdef SERLOG
-			Serial.print("state = GEAR2, ");
-			Serial.println(state);
-		#endif
 	}
 	else if (revGear_button == LOW && motorCurrentValue > enablePedal)
 	{
 		state = REVGEAR;
-
-		#ifdef SERLOG
-			Serial.print("state = REVGEAR, ");
-			Serial.println(state);
-		#endif
 	}
 	else if (gear1_button == LOW && motorCurrentValue > enablePedal)
 	{
 		state = GEAR1;
-
-		#ifdef SERLOG
-			Serial.print("state = GEAR1, ");
-			Serial.println(state);
-		#endif
 	}
 	else
 	{
 		state = PARKING;
-		pedalCurrentValue = pedalMinimumValue;
-
-		#ifdef SERLOG
-			Serial.print("state = PARKING, ");
-			Serial.println(state);
-		#endif
+		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
 
   // Here we punish the driver if the gear leaver is yanked around all the time.
