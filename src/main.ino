@@ -36,7 +36,7 @@
 #include <Metro.h>
 
 
-// #define SERLOG //Turn on Serial logging
+#define SERLOG //Turn on Serial logging
 
 const int PEDAL_PIN = A0;
 const int GEAR1_PIN = A1;
@@ -55,7 +55,7 @@ const int enablePedal = 5;
 const int punishTime = 2000; //punish for x ms if the pedal is yanked all the time
 
 // Instanciate a metro object and set the interval to 100 milliseconds (0.1 seconds).
-Metro pedalTimer = Metro(50);
+Metro pedalTimer = Metro(25);
 
 // The timer for changing gear, if the gear is changed faster than this delay it wont do it.
 unsigned long previousGearTime=0;
@@ -148,6 +148,11 @@ void loop()
 			pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 		}
 
+		if(state==PARKING || state==BRAKING)
+		{
+			pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
+		}
+
 		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
 
 
@@ -162,6 +167,7 @@ void loop()
 			{
 				pedalCurrentValue = pedalPrevValue - accelRate;
 			}
+
 			pedalPrevValue = pedalCurrentValue;
 
 		}
@@ -169,49 +175,65 @@ void loop()
 		{
 			pedalPrevValue = pedalCurrentValue;
 		}
-	}
 
+
+	}
 
 	// Check for button presses and set the state accordingly
 	checkButtons();
 
-		// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
+	// Get input from the analog pedal and map it to PWM output value and constrain it to avoid negative numbers.
 	motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
 	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
 
 
+	#ifdef SERLOG
+      Serial.print("state, ");
+      Serial.println(state);
+  #endif
+
+	#ifdef SERLOG
+    Serial.print("motor = ");
+    Serial.println(motorCurrentValue);
+  #endif
+
+  // if(motorCurrentValue > enablePedal)
+	// {
+	// 	digitalWrite(RELAY_PIN,LOW);
+	// }
+	// else
+	// {
+	// 	digitalWrite(RELAY_PIN,HIGH);
+	// }
+
 	// Set the desired output depending on state.
 	switch(state)
 	{
 		case PARKING:
-		  digitalWrite(RELAY_PIN,HIGH);
-			// motor.set(B, 0, COAST);							// channel B Coast
-			// motor.set(A, 0, COAST);							// channel A Coast
-			motor.close(B);
-			motor.close(A);
+
+			motor.disable(B);							// channel B Coast
+			motor.disable(A);							// channel A Coast
+			//motor.close(B);
+			//motor.close(A);
 			prevState = PARKING;
 			break;
 		case BRAKING:
-		  digitalWrite(RELAY_PIN,LOW);
-			motor.set(B, 0, BRAKE);							// channel B Brake
-			motor.set(A, 0, BRAKE);							// channel A Brake
+			motor.brake(B);							// channel B Brake
+			motor.brake(A);							// channel A Brake
 			prevState = BRAKING;
 			break;
 		case GEAR1:
-		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, FORWARD);     // channel B FORWARD rotation at half speed
 			motor.set(A, motorCurrentValue/2, FORWARD);     // channel A FORWARD rotation at half speed
 			prevState = GEAR1;
 			break;
 		case GEAR2:
-		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue, FORWARD);     // channel B FORWARD rotation
 			motor.set(A, motorCurrentValue, FORWARD);     // channel A FORWARD rotation
 			prevState = GEAR2;
 			break;
 		case REVGEAR:
-		  digitalWrite(RELAY_PIN,LOW);
 			motor.set(B, motorCurrentValue/2, REVERSE);     // channel B REVERSE rotation
 			motor.set(A, motorCurrentValue/2, REVERSE);     // channel A REVERSE rotation
 			prevState = REVGEAR;
@@ -253,29 +275,26 @@ void checkButtons()
 	if(brake_button == LOW)
 	{
 		state = BRAKING;
-		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
 	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 	{
 		state = PARKING;
-		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
-	else if (gear2_button == LOW && motorCurrentValue > enablePedal)
+	else if (gear2_button == LOW)
 	{
 		state = GEAR2;
 	}
-	else if (revGear_button == LOW && motorCurrentValue > enablePedal)
+	else if (revGear_button == LOW)
 	{
 		state = REVGEAR;
 	}
-	else if (gear1_button == LOW && motorCurrentValue > enablePedal)
+	else if (gear1_button == LOW)
 	{
 		state = GEAR1;
 	}
 	else
 	{
 		state = PARKING;
-		pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 	}
 
   // Here we punish the driver if the gear leaver is yanked around all the time.

@@ -55,14 +55,7 @@ void MOTOR_CLASS::begin(void)
     digitalWrite(A_LPWM, HIGH);
     digitalWrite(B_RPWM, HIGH);
     digitalWrite(B_LPWM, HIGH);
-#ifdef MOTOR_V1
-    /** Timer0 fast PWM 8-bit, CLKio/8 */
-    TCCR0A = 0;
-    TCCR0B = 0;
-    sbi(TCCR0A, WGM01);
-    sbi(TCCR0A, WGM00);
-    sbi(TCCR0B, CS01);
-#endif
+
     /** Timer1 PWM phase correct 8-bit, CLKio/8 */
     TCCR1A = 0;
     TCCR1B = 0;
@@ -93,33 +86,7 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
 {
     /** change to fit user */
     speed = ~speed;
-#ifdef MOTRO_V1
-    if(ch == A){
-        if(dir == FORWARD){
-            OCR2B = speed;
-            A_RPWM_ON();
-            A_LPWM_OFF();
-            digitalWrite(A_LPWM, HIGH);
-        }else{
-            OCR0B = speed;
-            A_LPWM_ON();
-            A_RPWM_OFF();
-            digitalWrite(A_RPWM, HIGH);
-        }
-    }else if(ch == B){
-        if(dir == FORWARD){
-            OCR1A = speed;
-            B_RPWM_ON();
-            B_LPWM_OFF();
-            digitalWrite(B_LPWM, HIGH);
-        }else{
-            OCR0A = speed;
-            B_LPWM_ON();
-            B_RPWM_OFF();
-            digitalWrite(B_RPWM, HIGH);
-        }
-    }
-#else
+
 	if(ch == A){
         if(dir == FORWARD)
         {
@@ -128,23 +95,8 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
             A_RPWM_ON();
             A_LPWM_OFF();
             digitalWrite(A_LPWM, HIGH);
+            digitalWrite(A_DIS, LOW);
         }
-        else if(dir == BRAKE)
-        {
-            A_LPWM_OFF();
-            A_RPWM_OFF();
-            digitalWrite(A_EN, HIGH);
-            digitalWrite(A_LPWM, HIGH);
-            digitalWrite(A_RPWM, HIGH);
-        }
-        else if(dir == COAST)
-        {
-      			A_LPWM_OFF();
-      			A_RPWM_OFF();
-      			digitalWrite(A_EN, LOW);
-      			digitalWrite(A_LPWM, HIGH);
-      			digitalWrite(A_RPWM, HIGH);
-  		  }
         else
         {
             digitalWrite(A_EN, HIGH);
@@ -152,8 +104,11 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
             A_LPWM_ON();
             A_RPWM_OFF();
             digitalWrite(A_RPWM, HIGH);
+            digitalWrite(A_DIS, LOW);
         }
-    }else if(ch == B){
+    }
+
+    else if(ch == B){
         if(dir == FORWARD)
         {
             digitalWrite(B_EN, HIGH);
@@ -161,23 +116,8 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
             B_RPWM_ON();
             B_LPWM_OFF();
             digitalWrite(B_LPWM, HIGH);
+            digitalWrite(B_DIS, LOW);
         }
-        else if(dir == BRAKE)
-        {
-      			B_LPWM_OFF();
-      			B_RPWM_OFF();
-      			digitalWrite(B_EN, HIGH);
-      			digitalWrite(B_LPWM, HIGH);
-      			digitalWrite(B_RPWM, HIGH);
-  		  }
-        else if(dir == COAST)
-    		{
-      			B_LPWM_OFF();
-      			B_RPWM_OFF();
-      			digitalWrite(B_EN, LOW);
-      			digitalWrite(B_LPWM, HIGH);
-      			digitalWrite(B_RPWM, HIGH);
-    		}
         else
         {
             digitalWrite(B_EN, HIGH);
@@ -185,10 +125,11 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
             B_LPWM_ON();
             B_RPWM_OFF();
             digitalWrite(B_RPWM, HIGH);
+            digitalWrite(B_DIS, LOW);
         }
     }
-#endif
-}
+  }
+
 
 /**
 	@brief close motor
@@ -196,16 +137,59 @@ void MOTOR_CLASS::set(motor_ch_type ch, u8 speed, motor_direction_type dir)
 */
 void MOTOR_CLASS::close(motor_ch_type ch)
 {
-    if(ch == A){
+  if(ch == A){
+        digitalWrite(A_EN, LOW);
         A_LPWM_OFF();
         A_RPWM_OFF();
         digitalWrite(A_LPWM, HIGH);
         digitalWrite(A_RPWM, HIGH);
-    }else if(ch == B){
+        digitalWrite(A_DIS, LOW);
+    }
+    else if(ch == B){
+        digitalWrite(B_EN, LOW);
         B_LPWM_OFF();
         B_RPWM_OFF();
         digitalWrite(B_LPWM, HIGH);
         digitalWrite(B_RPWM, HIGH);
+        digitalWrite(B_DIS, LOW);
+    }
+}
+
+/**
+	@brief brake motor
+	@param ch --> channel to close, the value must be A or B.
+*/
+void MOTOR_CLASS::brake(motor_ch_type ch)
+{
+  if(ch == A){
+      digitalWrite(A_EN, HIGH);
+      A_LPWM_OFF();
+      A_RPWM_OFF();
+      digitalWrite(A_LPWM, HIGH);
+      digitalWrite(A_RPWM, HIGH);
+      digitalWrite(A_DIS, LOW);
+    }
+    else if(ch == B){
+      digitalWrite(B_EN, HIGH);
+      B_LPWM_OFF();
+      B_RPWM_OFF();
+      digitalWrite(B_LPWM, HIGH);
+      digitalWrite(B_RPWM, HIGH);
+      digitalWrite(B_DIS, LOW);
+    }
+}
+
+/**
+	@brief disable motor
+	@param ch --> channel to close, the value must be A or B.
+*/
+void MOTOR_CLASS::disable(motor_ch_type ch)
+{
+  if(ch == A){
+        digitalWrite(A_DIS, HIGH);
+    }
+    else if(ch == B){
+        digitalWrite(B_DIS, HIGH);
     }
 }
 
