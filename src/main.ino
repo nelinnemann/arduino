@@ -50,7 +50,7 @@ const int HIGH_GEAR = 6;
 
 // Used to enable the pedal above a certain point when it is pressed.
 // helps in making the car coast once the pedal is released.
-const int enablePedal = 5;
+const int enablePedal = 230;
 
 const int punishTime = 2000; //punish for x ms if the pedal is yanked all the time
 
@@ -61,7 +61,7 @@ Metro pedalTimer = Metro(25);
 unsigned long previousGearTime=0;
 
 ResponsiveAnalogRead analog(PEDAL_PIN, true); // Initialize the responsive analog library to smooth input.
-int pedalMinimumValue = 190; // minimum value from the pedal
+int pedalMinimumValue = 210; // minimum value from the pedal
 int pedalMaximumValue = 780; // maximum value from the pedal
 int pedalCurrentValue = pedalMinimumValue; // current value of the pedal.
 int pedalPrevValue = pedalMinimumValue; // Previous value of the pedal, used to compare
@@ -186,7 +186,10 @@ void loop()
 	motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
 	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
-
+	// if(analog.getValue() < enablePedal)
+	// {
+	// 	state = PARKING;
+	// }
 
 	#ifdef SERLOG
       Serial.print("state, ");
@@ -194,8 +197,8 @@ void loop()
   #endif
 
 	#ifdef SERLOG
-    Serial.print("motor = ");
-    Serial.println(motorCurrentValue);
+    Serial.print("pedal = ");
+    Serial.println(pedalCurrentValue);
   #endif
 
   // if(motorCurrentValue > enablePedal)
@@ -280,15 +283,15 @@ void checkButtons()
 	{
 		state = PARKING;
 	}
-	else if (gear2_button == LOW)
+	else if (gear2_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = GEAR2;
 	}
-	else if (revGear_button == LOW)
+	else if (revGear_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = REVGEAR;
 	}
-	else if (gear1_button == LOW)
+	else if (gear1_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = GEAR1;
 	}
