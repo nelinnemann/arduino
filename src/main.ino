@@ -196,10 +196,10 @@ void loop()
       Serial.println(state);
   #endif
 
-	#ifdef SERLOG
-    Serial.print("pedal = ");
-    Serial.println(pedalCurrentValue);
-  #endif
+	// #ifdef SERLOG
+  //   Serial.print("pedal = ");
+  //   Serial.println(pedalCurrentValue);
+  // #endif
 
   // if(motorCurrentValue > enablePedal)
 	// {
@@ -283,10 +283,6 @@ void checkButtons()
 	{
 		state = PARKING;
 	}
-	else if (gear2_button == LOW && analog.getValue() > enablePedal)
-	{
-		state = GEAR2;
-	}
 	else if (revGear_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = REVGEAR;
@@ -295,6 +291,11 @@ void checkButtons()
 	{
 		state = GEAR1;
 	}
+	else if (gear2_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = GEAR2;
+	}
+
 	else
 	{
 		state = PARKING;
