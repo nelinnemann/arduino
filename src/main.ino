@@ -36,7 +36,7 @@
 #include <Metro.h>
 
 
-#define SERLOG //Turn on Serial logging
+//#define SERLOG //Turn on Serial logging
 
 const int PEDAL_PIN = A0;
 const int GEAR1_PIN = A1;
@@ -82,6 +82,8 @@ int brake_button;   // button state for brake pedal
 
 int lowGear_button; // Button state for low gear
 int highGear_button; // Button state for high gear
+
+int prevButton;
 
 // States that our electrical car can be in.
 typedef enum states{
@@ -135,6 +137,7 @@ void setup()
 // The loop function is called in an endless loop
 void loop()
 {
+
 	// update the ResponsiveAnalogRead object every time the timer is true
 	analog.update();
 	if(pedalTimer.check() == 1)
@@ -175,8 +178,6 @@ void loop()
 		{
 			pedalPrevValue = pedalCurrentValue;
 		}
-
-
 	}
 
 	// Check for button presses and set the state accordingly
@@ -186,29 +187,10 @@ void loop()
 	motorCurrentValue = map(pedalCurrentValue,pedalMinimumValue,pedalMaximumValue,motorMinimumSpeed,motorMaximumSpeed);
 	motorCurrentValue = constrain(motorCurrentValue, motorMinimumSpeed, motorMaximumSpeed);
 
-	// if(analog.getValue() < enablePedal)
-	// {
-	// 	state = PARKING;
-	// }
-
 	#ifdef SERLOG
-      Serial.print("state, ");
-      Serial.println(state);
+			Serial.print("State, ");
+			Serial.print(state);
   #endif
-
-	// #ifdef SERLOG
-  //   Serial.print("pedal = ");
-  //   Serial.println(pedalCurrentValue);
-  // #endif
-
-  // if(motorCurrentValue > enablePedal)
-	// {
-	// 	digitalWrite(RELAY_PIN,LOW);
-	// }
-	// else
-	// {
-	// 	digitalWrite(RELAY_PIN,HIGH);
-	// }
 
 	// Set the desired output depending on state.
 	switch(state)
@@ -251,6 +233,12 @@ void checkButtons()
 {
 	unsigned long currentMillis = millis();
 
+	#ifdef SERLOG
+			Serial.print(" currentMillis, ");
+			Serial.print(currentMillis);
+			Serial.print(" previousGearTime, ");
+			Serial.println(previousGearTime);
+	#endif
 	// read digital inputs
 	gear1_button = digitalRead(GEAR1_PIN);
 	gear2_button = digitalRead(GEAR2_PIN);
@@ -274,6 +262,7 @@ void checkButtons()
 		motorMaximumSpeed = 127; // Half speed, button at 0
 	}
 
+
 	// Detect button presses, brake must be first to override the rest.
 	if(brake_button == LOW)
 	{
@@ -283,34 +272,29 @@ void checkButtons()
 	{
 		state = PARKING;
 	}
+	else if ((analog.getValue() < enablePedal) && ((unsigned long)(currentMillis - previousGearTime) >= punishTime))
+	{
+		state = PARKING;
+	}
 	else if (revGear_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = REVGEAR;
-	}
-	else if (gear1_button == LOW && analog.getValue() > enablePedal)
-	{
-		state = GEAR1;
 	}
 	else if (gear2_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = GEAR2;
 	}
-
-	else
+	else if (analog.getValue() > enablePedal)
 	{
-		state = PARKING;
+		state = GEAR1;
 	}
 
-  // Here we punish the driver if the gear leaver is yanked around all the time.
-	if( (prevState == GEAR1 && state == REVGEAR) || (prevState == REVGEAR && state == GEAR1) || (prevState == REVGEAR && state == GEAR2) || (prevState == GEAR2 && state == REVGEAR) )
+	// Here we punish the driver if the gear leaver is yanked around all the time.
+	if((prevState == GEAR1 && state == REVGEAR) || (prevState == REVGEAR && state == GEAR1))
 	{
 		previousGearTime = currentMillis;
 		pedalCurrentValue = pedalMinimumValue;
 		state = PARKING;
-	}
-	else
-	{
-		state = state;
 	}
 
 }
