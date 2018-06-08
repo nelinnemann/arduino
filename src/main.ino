@@ -72,7 +72,9 @@ bool first = true; //First iteration in the loop to avoid speeder being pressed 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
 int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
 int motorCurrentValue = 0;   // The current speed value, used to feed into the motor control
-int accelRate = 10; // Acceleration rate for the car
+int accelRate = 15; // Acceleration rate for the car
+int deccelRate = 10; // Decceleration rate for the car
+int brakeRate = 20; // Brake rate for the car
 
 
 int gear1_button; // button state for gear 1
@@ -92,6 +94,9 @@ typedef enum states{
 	GEAR2,
 	REVGEAR,
 	BRAKING,
+	BRAKEGEAR1,
+	BRAKEGEAR2,
+	BRAKEREVGEAR,
 } states;
 
 states state = PARKING; // Set the initial state for the state
@@ -158,9 +163,12 @@ void loop()
 
 		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
 
-
+		if(state==BRAKEGEAR1 || state==BRAKEGEAR2 || state==BRAKEREVGEAR)
+		{
+			pedalCurrentValue = pedalPrevValue - brakeRate;
+		}
 		// if the pedal is released or pressed too rapidly we control the accel/deccel
-		if(pedalDiff > accelRate)
+		if(pedalDiff > accelRate && (state==GEAR1 || state==GEAR2 || state==REVGEAR))
 		{
 			if(pedalCurrentValue > pedalPrevValue)
 			{
@@ -168,7 +176,7 @@ void loop()
 			}
 			else
 			{
-				pedalCurrentValue = pedalPrevValue - accelRate;
+				pedalCurrentValue = pedalPrevValue - deccelRate;
 			}
 
 			pedalPrevValue = pedalCurrentValue;
@@ -213,15 +221,30 @@ void loop()
 			motor.set(A, motorCurrentValue/2, FORWARD);     // channel A FORWARD rotation at half speed
 			prevState = GEAR1;
 			break;
+		case BRAKEGEAR1:
+			motor.set(B, motorCurrentValue/2, FORWARD);     // channel B FORWARD rotation at half speed
+			motor.set(A, motorCurrentValue/2, FORWARD);     // channel A FORWARD rotation at half speed
+			prevState = BRAKEGEAR1;
+			break;
 		case GEAR2:
 			motor.set(B, motorCurrentValue, FORWARD);     // channel B FORWARD rotation
 			motor.set(A, motorCurrentValue, FORWARD);     // channel A FORWARD rotation
 			prevState = GEAR2;
 			break;
+		case BRAKEGEAR2:
+			motor.set(B, motorCurrentValue, FORWARD);     // channel B FORWARD rotation
+			motor.set(A, motorCurrentValue, FORWARD);     // channel A FORWARD rotation
+			prevState = BRAKEGEAR2;
+			break;
 		case REVGEAR:
 			motor.set(B, motorCurrentValue/2, REVERSE);     // channel B REVERSE rotation
 			motor.set(A, motorCurrentValue/2, REVERSE);     // channel A REVERSE rotation
 			prevState = REVGEAR;
+			break;
+		case BRAKEREVGEAR:
+			motor.set(B, motorCurrentValue/2, REVERSE);     // channel B REVERSE rotation
+			motor.set(A, motorCurrentValue/2, REVERSE);     // channel A REVERSE rotation
+			prevState = BRAKEREVGEAR;
 			break;
 	}
 
@@ -264,9 +287,21 @@ void checkButtons()
 
 
 	// Detect button presses, brake must be first to override the rest.
-	if(brake_button == LOW)
+	if(brake_button == LOW && analog.getValue() < enablePedal)
 	{
 		state = BRAKING;
+	}
+	else if (gear2_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = BRAKEGEAR2;
+	}
+	else if (brake_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = BRAKEGEAR1;
+	}
+	else if (revGear_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = BRAKEGEAR2;
 	}
 	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 	{
