@@ -72,9 +72,9 @@ bool first = true; //First iteration in the loop to avoid speeder being pressed 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
 int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
 int motorCurrentValue = 0;   // The current speed value, used to feed into the motor control
-int accelRate = 15; // Acceleration rate for the car
+int accelRate = 10; // Acceleration rate for the car
 int deccelRate = 10; // Decceleration rate for the car
-int brakeRate = 20; // Brake rate for the car
+int brakeRate = 10; // Brake rate for the car
 
 
 int gear1_button; // button state for gear 1
@@ -287,19 +287,27 @@ void checkButtons()
 
 
 	// Detect button presses, brake must be first to override the rest.
-	if(brake_button == LOW && analog.getValue() < enablePedal)
+	if (gear2_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
 	{
-		state = BRAKING;
+		state = BRAKEGEAR2;
+	}
+	else if (gear2_button == LOW && brake_button == LOW)
+	{
+		state = BRAKEGEAR2;
 	}
 	else if (revGear_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = BRAKEREVGEAR;
 	}
-	else if (gear2_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
+	else if (revGear_button == LOW && brake_button == LOW)
 	{
-		state = BRAKEGEAR2;
+		state = BRAKEREVGEAR;
 	}
 	else if (brake_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = BRAKEGEAR1;
+	}
+	else if(brake_button == LOW)
 	{
 		state = BRAKEGEAR1;
 	}
