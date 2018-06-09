@@ -72,9 +72,9 @@ bool first = true; //First iteration in the loop to avoid speeder being pressed 
 int motorMinimumSpeed = 0;   // Lowest speed the motor can run at
 int motorMaximumSpeed = 254; // Highest speed the motor can run at (max 254)
 int motorCurrentValue = 0;   // The current speed value, used to feed into the motor control
-int accelRate = 10; // Acceleration rate for the car
+int accelRate = 12; // Acceleration rate for the car
 int deccelRate = 10; // Decceleration rate for the car
-int brakeRate = 10; // Brake rate for the car
+int brakeRate = 20; // Brake rate for the car
 
 
 int gear1_button; // button state for gear 1
@@ -156,17 +156,20 @@ void loop()
 			pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 		}
 
-		if(state==PARKING || state==BRAKING)
+		if(state==PARKING)
 		{
 			pedalCurrentValue = pedalMinimumValue; //Reset the value to avoid wheel spin
 		}
 
-		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
+
 
 		if(state==BRAKEGEAR1 || state==BRAKEGEAR2 || state==BRAKEREVGEAR)
 		{
 			pedalCurrentValue = pedalPrevValue - brakeRate;
+			pedalPrevValue = pedalCurrentValue;
 		}
+
+		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
 		// if the pedal is released or pressed too rapidly we control the accel/deccel
 		if(pedalDiff > accelRate && (state==GEAR1 || state==GEAR2 || state==REVGEAR))
 		{
@@ -204,7 +207,6 @@ void loop()
 	switch(state)
 	{
 		case PARKING:
-
 			motor.disable(B);							// channel B Coast
 			motor.disable(A);							// channel A Coast
 			//motor.close(B);
@@ -287,27 +289,15 @@ void checkButtons()
 
 
 	// Detect button presses, brake must be first to override the rest.
-	if (gear2_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
+	if (gear2_button == LOW && brake_button == LOW)
 	{
 		state = BRAKEGEAR2;
-	}
-	else if (gear2_button == LOW && brake_button == LOW)
-	{
-		state = BRAKEGEAR2;
-	}
-	else if (revGear_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
-	{
-		state = BRAKEREVGEAR;
 	}
 	else if (revGear_button == LOW && brake_button == LOW)
 	{
 		state = BRAKEREVGEAR;
 	}
-	else if (brake_button == LOW && analog.getValue() > enablePedal)
-	{
-		state = BRAKEGEAR1;
-	}
-	else if(brake_button == LOW)
+	else if(brake_button == LOW && (state == GEAR1 || state == BRAKEGEAR1))
 	{
 		state = BRAKEGEAR1;
 	}
@@ -315,10 +305,10 @@ void checkButtons()
 	{
 		state = PARKING;
 	}
-	else if ((analog.getValue() < enablePedal) && ((unsigned long)(currentMillis - previousGearTime) >= punishTime))
-	{
-		state = PARKING;
-	}
+	// else if ((analog.getValue() < enablePedal) && ((unsigned long)(currentMillis - previousGearTime) >= punishTime))
+	// {
+	// 	state = PARKING;
+	// }
 	else if (revGear_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = REVGEAR;
@@ -330,6 +320,10 @@ void checkButtons()
 	else if (analog.getValue() > enablePedal)
 	{
 		state = GEAR1;
+	}
+	else if (pedalPrevValue < enablePedal && analog.getValue() < enablePedal)
+	{
+		state=PARKING;
 	}
 
 	// Here we punish the driver if the gear leaver is yanked around all the time.
