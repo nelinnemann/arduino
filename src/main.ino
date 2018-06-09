@@ -257,10 +257,10 @@ void checkButtons()
 	unsigned long currentMillis = millis();
 
 	#ifdef SERLOG
-			Serial.print(" currentMillis, ");
-			Serial.print(currentMillis);
-			Serial.print(" previousGearTime, ");
-			Serial.println(previousGearTime);
+		Serial.print(" currentMillis, ");
+		Serial.print(currentMillis);
+		Serial.print(" previousGearTime, ");
+		Serial.println(previousGearTime);
 	#endif
 	// read digital inputs
 	gear1_button = digitalRead(GEAR1_PIN);
@@ -291,6 +291,10 @@ void checkButtons()
 	{
 		state = BRAKING;
 	}
+	else if (revGear_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
+	{
+		state = BRAKEREVGEAR;
+	}
 	else if (gear2_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = BRAKEGEAR2;
@@ -298,10 +302,6 @@ void checkButtons()
 	else if (brake_button == LOW && analog.getValue() > enablePedal)
 	{
 		state = BRAKEGEAR1;
-	}
-	else if (revGear_button == LOW && brake_button == LOW && analog.getValue() > enablePedal)
-	{
-		state = BRAKEGEAR2;
 	}
 	else if ((unsigned long)(currentMillis - previousGearTime) <= punishTime)
 	{
