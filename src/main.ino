@@ -48,12 +48,10 @@ const int HIGH_GEAR = 6;
 const int punishTime = 2000; //punish for x ms if the pedal is yanked all the time
 
 // Instanciate a metro object and set the interval to 100 milliseconds (0.1 seconds).
-Metro pedalTimer = Metro(25);
+Metro pedalTimer = Metro(100);
 
 // The timer for changing gear, if the gear is changed faster than this delay it wont do it.
 unsigned long previousGearTime=0;
-
-
 
 bool first = true; //First iteration in the loop to avoid speeder being pressed down on boot
 
@@ -66,8 +64,6 @@ int brakeRate = 20; // Brake rate for the car
 
 int pedalCurrentValue = motorMinimumSpeed; // current value of the pedal.
 int pedalPrevValue = motorMinimumSpeed; // Previous value of the pedal, used to compare
-int pedalDiff = 0; // diff between current value and previous value.
-
 
 int gear1_button; // button state for gear 1
 int gear2_button; // button state for gear 2
@@ -137,14 +133,12 @@ void loop()
 
 	if(pedalTimer.check() == 1)
 	{
-		if (pedal_button)
-		{
-			pedalCurrentValue = motorMaximumSpeed;
-		}
+		
 		//Set the value for the first loop to avoid speeder being pressed down.
 		if(first)
 		{
 			pedalCurrentValue = motorMinimumSpeed; //Reset the value to avoid wheel spin
+			first = false;
 		}
 
 		if(state==PARKING)
@@ -152,40 +146,23 @@ void loop()
 			pedalCurrentValue = motorMinimumSpeed; //Reset the value to avoid wheel spin
 		}
 
-		if(state==BRAKEGEAR1 || state==BRAKEGEAR2 || state==BRAKEREVGEAR)
+		if (pedal_button)
 		{
-			pedalCurrentValue = pedalPrevValue - brakeRate;
-			pedalPrevValue = pedalCurrentValue;
-		}
-
-		pedalDiff = abs(pedalCurrentValue-pedalPrevValue);
-		// if the pedal is released or pressed too rapidly we control the accel/deccel
-		if(pedalDiff > accelRate && (state==GEAR1 || state==GEAR2 || state==REVGEAR))
-		{
-			if(pedalCurrentValue > pedalPrevValue)
+			pedalCurrentValue = pedalCurrentValue - brakeRate;
+			if (pedalCurrentValue < motorMinimumSpeed)
 			{
-				pedalCurrentValue = pedalPrevValue + accelRate;
-				if(pedalCurrentValue > motorMaximumSpeed)
-				{
-					pedalCurrentValue = motorMaximumSpeed;
-				}
+				pedalCurrentValue = motorMinimumSpeed;
 			}
-			else
-			{
-				pedalCurrentValue = pedalPrevValue - deccelRate;
-				if(pedalCurrentValue < motorMinimumSpeed)
-				{
-					pedalCurrentValue = motorMinimumSpeed;
-				}
-			}
-
-			pedalPrevValue = pedalCurrentValue;
-
 		}
 		else
 		{
-			pedalPrevValue = pedalCurrentValue;
+			pedalCurrentValue = pedalCurrentValue + brakeRate;
+			if (pedalCurrentValue > motorMaximumSpeed)
+			{
+				pedalCurrentValue = motorMaximumSpeed;
+			}
 		}
+
 	}
 
 	// Check for button presses and set the state accordingly
@@ -198,6 +175,8 @@ void loop()
 	#ifdef SERLOG
 			Serial.print("State, ");
 			Serial.print(state);
+			Serial.print("motorCurrentValue, ");
+			Serial.print(motorCurrentValue);
    #endif
 
 	// Set the desired output depending on state.
@@ -286,15 +265,15 @@ void checkButtons()
 
 
 	// Detect button presses, brake must be first to override the rest.
-	if (gear2_button == LOW && pedal_button == LOW)
+	if (gear2_button == LOW && pedal_button)
 	{
 		state = BRAKEGEAR2;
 	}
-	else if (revGear_button == LOW && pedal_button == LOW)
+	else if (revGear_button == LOW && pedal_button)
 	{
 		state = BRAKEREVGEAR;
 	}
-	else if(pedal_button == LOW && (state == GEAR1 || state == BRAKEGEAR1))
+	else if(pedal_button && (state == GEAR1 || state == BRAKEGEAR1))
 	{
 		state = BRAKEGEAR1;
 	}
@@ -306,19 +285,19 @@ void checkButtons()
 	// {
 	// 	state = PARKING;
 	// }
-	else if (revGear_button == LOW && pedal_button)
+	else if (revGear_button == LOW && pedal_button == LOW)
 	{
 		state = REVGEAR;
 	}
-	else if (gear2_button == LOW && pedal_button)
+	else if (gear2_button == LOW && pedal_button == LOW)
 	{
 		state = GEAR2;
 	}
-	else if (pedal_button)
+	else if (pedal_button == LOW)
 	{
 		state = GEAR1;
 	}
-	else if (pedalPrevValue < 1 && pedal_button)
+	else if (pedalPrevValue < 1 && pedal_button == LOW)
 	{
 		state=PARKING;
 	}
